@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Sewing Shop",
+    "slug": "sewing-shop",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "sewingshop",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#fdf4ff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#fdf4ff"
+      }
+    },
+    "extra": {
+      "apiUrl": "http://192.168.1.42:8000/api"
+    }
+  }
+}
