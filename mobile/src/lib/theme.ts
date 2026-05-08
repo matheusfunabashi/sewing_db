@@ -1,41 +1,63 @@
 import { MD3LightTheme } from 'react-native-paper';
 
 export const COLORS = {
-  primary: '#06b6d4',
-  primaryDark: '#0891b2',
-  primarySoft: '#ecfeff',
-  background: '#f8fafc',
-  card: '#ffffff',
-  text: '#0f172a',
-  textMuted: '#475569',
-  border: '#dbe3ea',
-  success: '#10b981',
-  warning: '#f59e0b',
-  danger: '#dc2626',
-  pending: '#64748b',
-  inProduction: '#06b6d4',
-  completed: '#10b981',
-  delivered: '#0e7490',
-  cancelled: '#94a3b8',
-  black: '#020617',
+  // Core brand — warm peach/pink from the Dribbble design
+  primary:     '#E8956D',   // peach-orange (buttons, active states)
+  primaryDark: '#C4703D',
+  primarySoft: '#FDF0E8',
+
+  // Gradient stops (used in LinearGradient)
+  gradStart:   '#F9C89E',   // warm peach
+  gradMid:     '#F5A8C0',   // rose pink
+  gradEnd:     '#EFC0D0',   // soft pink
+
+  // Surfaces
+  background:  '#FBF6F0',   // warm off-white
+  card:        '#FFFFFF',
+  cardWarm:    '#FEF3EC',   // peach-tinted card
+
+  // Dark nav / pill
+  dark:        '#1E1208',   // near-black warm
+  darkMuted:   '#7A5A48',
+
+  // Text
+  text:        '#1A0E06',
+  textMuted:   '#9A7060',
+  textLight:   '#C4A898',
+
+  // Borders
+  border:      '#EDE0D8',
+  borderWarm:  '#F0CDB8',
+
+  // Semantic
+  success:   '#4CAF7D',
+  warning:   '#E8A030',
+  danger:    '#D04040',
+
+  // Status colours
+  pending:      '#A09080',
+  inProduction: '#E8956D',
+  completed:    '#4CAF7D',
+  delivered:    '#2E8B6A',
+  cancelled:    '#B0A0A0',
 };
 
 export const STATUS_COLORS: Record<string, string> = {
-  pending: COLORS.pending,
+  pending:       COLORS.pending,
   in_production: COLORS.inProduction,
-  completed: COLORS.completed,
-  delivered: COLORS.delivered,
-  cancelled: COLORS.cancelled,
-  open: COLORS.pending,
-  in_progress: COLORS.inProduction,
-  on_hold: COLORS.warning,
+  completed:     COLORS.completed,
+  delivered:     COLORS.delivered,
+  cancelled:     COLORS.cancelled,
+  open:          COLORS.pending,
+  in_progress:   COLORS.inProduction,
+  on_hold:       COLORS.warning,
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {
-  low: '#94a3b8',
-  normal: '#475569',
-  high: '#f59e0b',
-  urgent: '#dc2626',
+  low:    '#B0A898',
+  normal: '#7A9080',
+  high:   '#E8A030',
+  urgent: '#D04040',
 };
 
 export const STAGES = [
@@ -58,21 +80,21 @@ export const statusLabel = stageLabel;
 
 export const paperTheme = {
   ...MD3LightTheme,
-  roundness: 14,
+  roundness: 16,
   colors: {
     ...MD3LightTheme.colors,
-    primary: COLORS.primary,
-    onPrimary: '#ffffff',
-    primaryContainer: COLORS.primarySoft,
-    onPrimaryContainer: COLORS.primaryDark,
-    secondary: COLORS.black,
-    onSecondary: '#ffffff',
-    surface: COLORS.card,
-    onSurface: COLORS.text,
-    surfaceVariant: '#f1f5f9',
-    onSurfaceVariant: COLORS.textMuted,
-    background: COLORS.background,
-    error: COLORS.danger,
-    outline: COLORS.border,
+    primary:              COLORS.primary,
+    onPrimary:            '#ffffff',
+    primaryContainer:     COLORS.primarySoft,
+    onPrimaryContainer:   COLORS.primaryDark,
+    secondary:            COLORS.dark,
+    onSecondary:          '#ffffff',
+    surface:              COLORS.card,
+    onSurface:            COLORS.text,
+    surfaceVariant:       COLORS.cardWarm,
+    onSurfaceVariant:     COLORS.textMuted,
+    background:           COLORS.background,
+    error:                COLORS.danger,
+    outline:              COLORS.border,
   },
 };

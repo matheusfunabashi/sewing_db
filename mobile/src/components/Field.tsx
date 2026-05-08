@@ -4,32 +4,27 @@ import { TextInput as PaperInput } from 'react-native-paper';
 import { COLORS } from '../lib/theme';
 
 interface Props {
-  label: string;
-  value: string;
-  onChangeText: (v: string) => void;
-  placeholder?: string;
-  multiline?: boolean;
+  label:         string;
+  value:         string;
+  onChangeText:  (v: string) => void;
+  placeholder?:  string;
+  multiline?:    boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric' | 'decimal-pad';
 }
 
 export default function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  multiline = false,
-  keyboardType = 'default',
+  label, value, onChangeText, placeholder, multiline = false, keyboardType = 'default',
 }: Props) {
   return (
     <View style={{ marginBottom: 14 }}>
       <Text
         style={{
-          color: COLORS.textMuted,
-          marginBottom: 8,
-          fontSize: 12,
-          letterSpacing: 0.4,
-          fontWeight: '700',
-          textTransform: 'uppercase',
+          color:          COLORS.textMuted,
+          marginBottom:   8,
+          fontSize:       11,
+          letterSpacing:  0.5,
+          fontWeight:     '700',
+          textTransform:  'uppercase',
         }}
       >
         {label}
@@ -45,12 +40,12 @@ export default function Field({
         activeOutlineColor={COLORS.primary}
         outlineColor={COLORS.border}
         textColor={COLORS.text}
-        theme={{ colors: { onSurfaceVariant: '#94a3b8' } }}
+        theme={{ colors: { onSurfaceVariant: COLORS.textLight } }}
         style={{
-          borderRadius: 12,
-          fontSize: 15,
+          borderRadius:   14,
+          fontSize:       15,
           backgroundColor: COLORS.card,
-          minHeight: multiline ? 80 : undefined,
+          minHeight:      multiline ? 80 : undefined,
         }}
       />
     </View>
