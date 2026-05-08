@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -9,17 +8,17 @@ import {
   View,
 } from 'react-native';
 
-import Badge from '../components/Badge';
-import Card from '../components/Card';
+import Badge         from '../components/Badge';
+import Card          from '../components/Card';
 import PrimaryButton from '../components/PrimaryButton';
 import { Employee, Paged, Ticket, api } from '../lib/api';
 import { COLORS, STAGES, stageLabel } from '../lib/theme';
 
 export default function TicketDetailScreen({ route }: any) {
   const { id } = route.params;
-  const [ticket, setTicket]   = useState<Ticket | null>(null);
-  const [employees, setEmps]  = useState<Employee[]>([]);
-  const [busy, setBusy]       = useState(false);
+  const [ticket, setTicket] = useState<Ticket | null>(null);
+  const [employees, setEmps] = useState<Employee[]>([]);
+  const [busy, setBusy]      = useState(false);
 
   const load = useCallback(async () => {
     setTicket(await api.get<Ticket>(`/tickets/${id}/`));
@@ -28,31 +27,25 @@ export default function TicketDetailScreen({ route }: any) {
   useEffect(() => {
     load();
     api.get<Paged<Employee>>('/employees/', { is_active: true })
-      .then((d) => setEmps(d.results))
-      .catch(() => {});
+      .then(d => setEmps(d.results)).catch(() => {});
   }, [load]);
 
   const advance = async () => {
     setBusy(true);
-    try {
-      await api.post(`/tickets/${id}/advance_stage/`);
-      await load();
-    } finally { setBusy(false); }
+    try { await api.post(`/tickets/${id}/advance_stage/`); await load(); }
+    finally { setBusy(false); }
   };
 
-  const assign = async (employeeId: number | null) => {
+  const assign = async (empId: number | null) => {
     setBusy(true);
-    try {
-      await api.patch(`/tickets/${id}/`, { assigned_employee: employeeId });
-      await load();
-    } finally { setBusy(false); }
+    try { await api.patch(`/tickets/${id}/`, { assigned_employee: empId }); await load(); }
+    finally { setBusy(false); }
   };
 
-  if (!ticket) {
-    return <View style={styles.center}><Text>Loading...</Text></View>;
-  }
-  const currentStageIndex = Math.max(STAGES.indexOf(ticket.stage as any), 0);
-  const isAtLastStage = currentStageIndex === STAGES.length - 1;
+  if (!ticket) return <View style={styles.center}><Text style={{ color: COLORS.textMuted }}>Loading…</Text></View>;
+
+  const currentIdx  = Math.max(STAGES.indexOf(ticket.stage as any), 0);
+  const isLastStage = currentIdx === STAGES.length - 1;
 
   return (
     <ScrollView
@@ -60,92 +53,74 @@ export default function TicketDetailScreen({ route }: any) {
       contentContainerStyle={{ padding: 16 }}
       refreshControl={<RefreshControl refreshing={busy} onRefresh={load} />}
     >
-      <Card>
-        <View style={styles.rowBetween}>
+      {/* ── summary ── */}
+      <Card style={{ backgroundColor: COLORS.cardWarm, borderColor: COLORS.borderWarm }}>
+        <View style={styles.row}>
           <Text style={styles.title}>{ticket.code}</Text>
           <Badge value={ticket.priority} kind="priority" small />
         </View>
-        <View style={[styles.rowBetween, { marginTop: 8 }]}>
+        <View style={[styles.row, { marginTop: 8 }]}>
           <Badge value={ticket.stage}  />
           <Badge value={ticket.status} />
         </View>
-        {ticket.fabric ? <Text style={[styles.meta, { marginTop: 8 }]}>Fabric: {ticket.fabric}</Text> : null}
-        {ticket.color  ? <Text style={styles.meta}>Color: {ticket.color}</Text> : null}
+        {ticket.fabric   ? <Text style={[styles.meta, { marginTop: 10 }]}>Fabric: {ticket.fabric}</Text>   : null}
+        {ticket.color    ? <Text style={styles.meta}>Colour: {ticket.color}</Text>    : null}
         {ticket.deadline ? <Text style={styles.meta}>Deadline: {ticket.deadline}</Text> : null}
-        {ticket.design_notes ? (
-          <Text style={[styles.meta, { marginTop: 8 }]}>Notes: {ticket.design_notes}</Text>
-        ) : null}
+        {ticket.design_notes ? <Text style={[styles.meta, { marginTop: 8, fontStyle: 'italic' }]}>{ticket.design_notes}</Text> : null}
       </Card>
 
-      <Text style={styles.section}>Production stage</Text>
+      {/* ── production timeline ── */}
+      <Text style={styles.section}>Production stages</Text>
       <Card>
-        <View>
-          {STAGES.map((s, idx) => {
-            const reached = idx <= currentStageIndex;
-            const isCurrent = idx === currentStageIndex;
-            return (
-              <View key={s} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View
-                    style={[
-                      styles.timelineDot,
-                      reached && styles.timelineDotReached,
-                      isCurrent && styles.timelineDotCurrent,
-                    ]}
-                  />
-                  {idx < STAGES.length - 1 && (
-                    <View
-                      style={[
-                        styles.timelineLine,
-                        idx < currentStageIndex && styles.timelineLineReached,
-                      ]}
-                    />
-                  )}
-                </View>
-                <View style={styles.timelineTextWrap}>
-                  <Text style={[styles.timelineLabel, isCurrent && styles.timelineLabelCurrent]}>
-                    {stageLabel(s)}
-                  </Text>
-                  {isCurrent && <Text style={styles.currentCaption}>Current stage</Text>}
-                </View>
+        {STAGES.map((s, idx) => {
+          const reached   = idx <= currentIdx;
+          const isCurrent = idx === currentIdx;
+          return (
+            <View key={s} style={styles.stageRow}>
+              <View style={styles.rail}>
+                <View style={[styles.dot, reached && styles.dotReached, isCurrent && styles.dotCurrent]} />
+                {idx < STAGES.length - 1 && (
+                  <View style={[styles.line, idx < currentIdx && styles.lineReached]} />
+                )}
               </View>
-            );
-          })}
-        </View>
+              <View style={styles.stageText}>
+                <Text style={[styles.stageLabel, isCurrent && styles.stageLabelCurrent]}>
+                  {stageLabel(s)}
+                </Text>
+                {isCurrent && <Text style={styles.currentTag}>Current</Text>}
+              </View>
+            </View>
+          );
+        })}
         <View style={{ height: 12 }} />
-        {isAtLastStage ? (
-          <View style={styles.completedPill}>
-            <Text style={styles.completedPillText}>Stages completed</Text>
+        {isLastStage ? (
+          <View style={styles.donePill}>
+            <Text style={styles.doneText}>All stages complete ✓</Text>
           </View>
         ) : (
           <PrimaryButton title="Advance to next stage" onPress={advance} loading={busy} />
         )}
       </Card>
 
-      <Text style={styles.section}>Assigned worker</Text>
+      {/* ── assign worker ── */}
+      <Text style={styles.section}>Assigned tailor</Text>
       <Card>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           <Pressable
             onPress={() => assign(null)}
-            style={[
-              styles.chip,
-              ticket.assigned_employee == null && { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-            ]}
+            style={[styles.chip, ticket.assigned_employee == null && styles.chipActive]}
           >
-            <Text style={{ color: ticket.assigned_employee == null ? '#fff' : COLORS.text, fontWeight: '600' }}>
+            <Text style={{ color: ticket.assigned_employee == null ? '#fff' : COLORS.text, fontWeight: '700' }}>
               Unassigned
             </Text>
           </Pressable>
-          {employees.map((e) => (
+          {employees.map(e => (
             <Pressable
               key={e.id}
               onPress={() => assign(e.id)}
-              style={[
-                styles.chip,
-                ticket.assigned_employee === e.id && { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-              ]}
+              style={[styles.chip, ticket.assigned_employee === e.id && styles.chipActive]}
             >
-              <Text style={{ color: ticket.assigned_employee === e.id ? '#fff' : COLORS.text, fontWeight: '600' }}>
+              <Text style={{ color: ticket.assigned_employee === e.id ? '#fff' : COLORS.text, fontWeight: '700' }}>
                 {e.full_name}
               </Text>
             </Pressable>
@@ -153,19 +128,16 @@ export default function TicketDetailScreen({ route }: any) {
         </View>
       </Card>
 
+      {/* ── history ── */}
       <Text style={styles.section}>History</Text>
       <Card>
-        {(ticket.history ?? []).length === 0 && (
-          <Text style={{ color: COLORS.textMuted }}>No history yet.</Text>
-        )}
-        {(ticket.history ?? []).map((h) => (
-          <View key={h.id} style={{ paddingVertical: 6, borderBottomColor: COLORS.border, borderBottomWidth: 1 }}>
-            <Text style={{ color: COLORS.text, fontWeight: '600' }}>
-              {h.from_stage ? `${stageLabel(h.from_stage)} -> ` : ''}{stageLabel(h.to_stage)}
+        {(ticket.history ?? []).length === 0 && <Text style={{ color: COLORS.textMuted }}>No history yet.</Text>}
+        {(ticket.history ?? []).map(h => (
+          <View key={h.id} style={styles.historyRow}>
+            <Text style={styles.historyStage}>
+              {h.from_stage ? `${stageLabel(h.from_stage)} → ` : ''}{stageLabel(h.to_stage)}
             </Text>
-            <Text style={{ color: COLORS.textMuted, fontSize: 12 }}>
-              {new Date(h.changed_at).toLocaleString()}
-            </Text>
+            <Text style={styles.historyTime}>{new Date(h.changed_at).toLocaleString()}</Text>
           </View>
         ))}
       </Card>
@@ -176,56 +148,51 @@ export default function TicketDetailScreen({ route }: any) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   center:    { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title:    { fontSize: 20, fontWeight: '900', color: COLORS.text },
-  meta:     { color: COLORS.textMuted, fontSize: 14 },
-  section:  { fontSize: 12, fontWeight: '800', color: COLORS.textMuted, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 12, marginBottom: 8 },
-  chip: {
-    backgroundColor: '#ffffff', borderColor: COLORS.border, borderWidth: 1,
-    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
-  },
-  timelineRow: { flexDirection: 'row', alignItems: 'flex-start' },
-  timelineRail: { width: 24, alignItems: 'center' },
-  timelineDot: {
-    width: 13,
-    height: 13,
-    borderRadius: 999,
-    borderWidth: 2,
-    borderColor: '#94a3b8',
+  row:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  title:     { fontSize: 19, fontWeight: '900', color: COLORS.text, fontStyle: 'italic' },
+  meta:      { color: COLORS.textMuted, fontSize: 14 },
+  section:   { fontSize: 11, fontWeight: '800', color: COLORS.textLight, textTransform: 'uppercase', letterSpacing: 0.7, marginTop: 12, marginBottom: 8 },
+
+  // stage timeline
+  stageRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  rail:     { width: 26, alignItems: 'center' },
+  dot: {
+    width: 13, height: 13, borderRadius: 99,
+    borderWidth: 2, borderColor: COLORS.border,
     backgroundColor: '#fff',
   },
-  timelineDotReached: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primary,
-  },
-  timelineDotCurrent: {
-    width: 15,
-    height: 15,
-    borderColor: COLORS.black,
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    minHeight: 20,
-    backgroundColor: '#cbd5e1',
-    marginTop: 2,
-  },
-  timelineLineReached: { backgroundColor: COLORS.primary },
-  timelineTextWrap: { flex: 1, paddingBottom: 8 },
-  timelineLabel: { color: COLORS.textMuted, fontWeight: '600' },
-  timelineLabelCurrent: { color: COLORS.black, fontWeight: '800' },
-  currentCaption: { fontSize: 12, color: COLORS.primaryDark, marginTop: 2, fontWeight: '700' },
-  completedPill: {
-    backgroundColor: '#d1fae5',
-    borderColor: '#10b981',
+  dotReached:  { borderColor: COLORS.primary, backgroundColor: COLORS.primary },
+  dotCurrent:  { width: 15, height: 15, borderColor: COLORS.dark, backgroundColor: COLORS.dark },
+  line:        { width: 2, flex: 1, minHeight: 20, backgroundColor: COLORS.border, marginTop: 2 },
+  lineReached: { backgroundColor: COLORS.primary },
+  stageText:   { flex: 1, paddingBottom: 10 },
+  stageLabel:  { color: COLORS.textMuted, fontWeight: '600', fontSize: 14 },
+  stageLabelCurrent: { color: COLORS.text, fontWeight: '800' },
+  currentTag:  { fontSize: 11, color: COLORS.primary, fontWeight: '700', marginTop: 2 },
+
+  donePill: {
+    backgroundColor: '#EAF7EE',
+    borderColor: COLORS.success,
     borderWidth: 1,
-    paddingVertical: 12,
     borderRadius: 14,
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  completedPillText: {
-    color: '#065f46',
-    fontWeight: '800',
-    fontSize: 14,
+  doneText: { color: '#2D7A50', fontWeight: '800', fontSize: 14 },
+
+  // assign chips
+  chip: {
+    backgroundColor: '#fff',
+    borderColor: COLORS.border,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 20,
   },
+  chipActive: { backgroundColor: COLORS.dark, borderColor: COLORS.dark },
+
+  // history
+  historyRow:   { paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  historyStage: { color: COLORS.text, fontWeight: '600', fontSize: 14 },
+  historyTime:  { color: COLORS.textMuted, fontSize: 12, marginTop: 2 },
 });

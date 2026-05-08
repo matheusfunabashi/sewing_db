@@ -5,9 +5,9 @@ import { Card as PaperCard } from 'react-native-paper';
 import { COLORS } from '../lib/theme';
 
 interface Props {
-  onPress?: () => void;
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
+  onPress?:  () => void;
+  children:  ReactNode;
+  style?:    StyleProp<ViewStyle>;
 }
 
 export default function Card({ onPress, children, style }: Props) {
@@ -18,10 +18,10 @@ export default function Card({ onPress, children, style }: Props) {
       style={[
         {
           backgroundColor: COLORS.card,
-          borderRadius: 16,
-          marginBottom: 12,
-          borderColor: COLORS.border,
-          borderWidth: 1,
+          borderRadius:    18,
+          marginBottom:    12,
+          borderColor:     COLORS.border,
+          borderWidth:     1,
         },
         style,
       ]}

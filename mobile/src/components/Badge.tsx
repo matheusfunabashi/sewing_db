@@ -10,19 +10,27 @@ interface Props {
 
 export default function Badge({ value, kind = 'status', small = false }: Props) {
   const color =
-    kind === 'priority' ? PRIORITY_COLORS[value] ?? '#6b7280' : STATUS_COLORS[value] ?? '#6b7280';
+    kind === 'priority'
+      ? (PRIORITY_COLORS[value] ?? '#9A8880')
+      : (STATUS_COLORS[value]   ?? '#9A8880');
+
   return (
     <Chip
       compact
       style={{
         backgroundColor: color + '22',
-        borderColor: color,
-        borderWidth: 1,
-        minHeight: small ? 24 : 28,
-        height: small ? 24 : 28,
+        borderColor:     color,
+        borderWidth:     1,
+        minHeight:  small ? 24 : 28,
+        height:     small ? 24 : 28,
         alignSelf: 'flex-start',
       }}
-      textStyle={{ color, fontWeight: '800', fontSize: small ? 10 : 12, marginVertical: 0 }}
+      textStyle={{
+        color,
+        fontWeight: '800',
+        fontSize:   small ? 10 : 12,
+        marginVertical: 0,
+      }}
     >
       {statusLabel(value)}
     </Chip>
