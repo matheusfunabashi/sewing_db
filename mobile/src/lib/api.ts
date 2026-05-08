@@ -141,6 +141,14 @@ export interface Employee {
   is_active: boolean;
 }
 
+export interface Material {
+  id: number;
+  name: string;
+  unit: string;
+  stock_qty: string;
+  unit_cost: string;
+}
+
 export interface Paged<T> {
   count: number;
   next: string | null;

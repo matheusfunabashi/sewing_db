@@ -10,10 +10,13 @@ interface Props {
   placeholder?:  string;
   multiline?:    boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric' | 'decimal-pad';
+  prefix?:       string;
+  suffix?:       string;
 }
 
 export default function Field({
-  label, value, onChangeText, placeholder, multiline = false, keyboardType = 'default',
+  label, value, onChangeText, placeholder, multiline = false,
+  keyboardType = 'default', prefix, suffix,
 }: Props) {
   return (
     <View style={{ marginBottom: 14 }}>
@@ -41,6 +44,8 @@ export default function Field({
         outlineColor={COLORS.border}
         textColor={COLORS.text}
         theme={{ colors: { onSurfaceVariant: COLORS.textLight } }}
+        left={prefix ? <PaperInput.Affix text={prefix} /> : undefined}
+        right={suffix ? <PaperInput.Affix text={suffix} /> : undefined}
         style={{
           borderRadius:   14,
           fontSize:       15,

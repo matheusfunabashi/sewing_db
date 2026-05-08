@@ -10,7 +10,7 @@ import {
 
 import Field         from '../components/Field';
 import PrimaryButton from '../components/PrimaryButton';
-import { Customer, Paged, api } from '../lib/api';
+import { Customer, Material, Paged, api } from '../lib/api';
 import { COLORS, PRIORITY_COLORS } from '../lib/theme';
 
 interface ItemDraft {
@@ -19,15 +19,61 @@ interface ItemDraft {
   description:  string;
   quantity:     string;
   unit_price:   string;
+  material_id:  number | null;
   measurements: { label: string; value_cm: string }[];
 }
 
 const PRIORITIES     = ['low', 'normal', 'high', 'urgent'] as const;
 const GARMENT_OPTIONS = ['Dress', 'Shirt', 'Shorts', 'Pants', 'Mask', 'Jacket', 'Other'] as const;
 
+// Rough labour base price per garment type (€). Used purely as an estimate.
+const GARMENT_BASE: Record<string, number> = {
+  Dress:  80,
+  Shirt:  40,
+  Shorts: 30,
+  Pants:  45,
+  Mask:   10,
+  Jacket: 120,
+  Other:  50,
+};
+
+// Material premium multiplier inferred from the material name.
+const materialMultiplier = (name: string): number => {
+  const n = name.toLowerCase();
+  if (n.includes('silk'))      return 1.6;
+  if (n.includes('wool'))      return 1.4;
+  if (n.includes('linen'))     return 1.3;
+  if (n.includes('denim'))     return 1.2;
+  if (n.includes('cotton'))    return 1.0;
+  if (n.includes('polyester')) return 0.85;
+  if (n.includes('lining'))    return 0.7;
+  return 1.0;
+};
+
+// Approximate material units per garment (so unit_cost from inventory matters).
+const garmentUnits = (garment: string): number => {
+  switch (garment) {
+    case 'Dress':  return 3.0;
+    case 'Jacket': return 2.5;
+    case 'Pants':
+    case 'Shirt':  return 2.0;
+    case 'Shorts': return 1.2;
+    case 'Mask':   return 0.3;
+    default:       return 1.5;
+  }
+};
+
+const estimatePrice = (garment: string, material: Material): number => {
+  const base   = GARMENT_BASE[garment] ?? GARMENT_BASE.Other;
+  const mult   = materialMultiplier(material.name);
+  const cost   = parseFloat(material.unit_cost) || 0;
+  const units  = garmentUnits(garment);
+  return Math.max(5, Math.round(base * mult + cost * units));
+};
+
 const newItem = (): ItemDraft => ({
   piece_option: '', custom_piece: '', description: '',
-  quantity: '1', unit_price: '0', measurements: [],
+  quantity: '1', unit_price: '0', material_id: null, measurements: [],
 });
 
 const formatIsoDate = (v: string) => {
@@ -42,6 +88,7 @@ const garmentType = (draft: ItemDraft) =>
 
 export default function OrderFormScreen({ navigation }: any) {
   const [customers, setCustomers]   = useState<Customer[]>([]);
+  const [materials, setMaterials]   = useState<Material[]>([]);
   const [customerId, setCustomerId] = useState<number | null>(null);
   const [dueDate, setDueDate]       = useState('');
   const [priority, setPriority]     = useState<(typeof PRIORITIES)[number]>('normal');
@@ -52,10 +99,23 @@ export default function OrderFormScreen({ navigation }: any) {
   useEffect(() => {
     api.get<Paged<Customer>>('/customers/')
       .then(d => setCustomers(d.results)).catch(() => setCustomers([]));
+    api.get<Paged<Material>>('/materials/')
+      .then(d => setMaterials(d.results)).catch(() => setMaterials([]));
   }, []);
 
   const updateItem = (idx: number, patch: Partial<ItemDraft>) =>
-    setItems(prev => prev.map((it, i) => i === idx ? { ...it, ...patch } : it));
+    setItems(prev => prev.map((it, i) => {
+      if (i !== idx) return it;
+      const merged = { ...it, ...patch };
+      // Recompute estimated price whenever garment type or material changes
+      if (patch.piece_option !== undefined || patch.material_id !== undefined) {
+        const mat = materials.find(m => m.id === merged.material_id);
+        if (merged.piece_option && mat) {
+          merged.unit_price = String(estimatePrice(merged.piece_option, mat));
+        }
+      }
+      return merged;
+    }));
 
   const addMeasurement = (idx: number) =>
     setItems(prev => prev.map((it, i) =>
@@ -75,6 +135,9 @@ export default function OrderFormScreen({ navigation }: any) {
     if (items.some(d => d.piece_option === 'Other' && !d.custom_piece.trim())) {
       Alert.alert('Required', 'Fill in the custom garment name.'); return;
     }
+    if (materials.length > 0 && items.some(d => d.piece_option && d.material_id == null)) {
+      Alert.alert('Required', 'Select a material for every garment.'); return;
+    }
     if (dueDate && !/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) {
       Alert.alert('Format', 'Due date must be YYYY-MM-DD.'); return;
     }
@@ -90,10 +153,13 @@ export default function OrderFormScreen({ navigation }: any) {
         notes:  notes || null,
       });
       for (const { d, gt } of prepared) {
+        const mat   = materials.find(m => m.id === d.material_id);
+        const tag   = mat ? `[Material: ${mat.name}]` : '';
+        const desc  = [tag, d.description].filter(Boolean).join(' ').trim() || null;
         const item = await api.post<{ id: number }>('/order-items/', {
           order:        order.id,
           garment_type: gt,
-          description:  d.description || null,
+          description:  desc,
           quantity:     Number(d.quantity || 1),
           unit_price:   Number(d.unit_price || 0).toFixed(2),
         });
@@ -173,12 +239,38 @@ export default function OrderFormScreen({ navigation }: any) {
             <Field label="Specific name" value={it.custom_piece}
               onChangeText={v => updateItem(idx, { custom_piece: v })} placeholder="e.g. Vest" />
           )}
+
+          <Text style={styles.label}>Material *</Text>
+          {materials.length === 0 ? (
+            <Text style={styles.hintMuted}>
+              No materials yet — add some in the Materials tab.
+            </Text>
+          ) : (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+              {materials.map(m => (
+                <Pressable key={m.id} onPress={() => updateItem(idx, { material_id: m.id })}
+                  style={[styles.chip, it.material_id === m.id && styles.chipActive]}>
+                  <Text style={{ color: it.material_id === m.id ? '#fff' : COLORS.text, fontWeight: '700' }}>
+                    {m.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
+
           <Field label="Description" value={it.description}
             onChangeText={v => updateItem(idx, { description: v })} multiline />
           <Field label="Quantity"    value={it.quantity}
             onChangeText={v => updateItem(idx, { quantity: v })} keyboardType="numeric" />
-          <Field label="Unit price"  value={it.unit_price}
-            onChangeText={v => updateItem(idx, { unit_price: v })} keyboardType="decimal-pad" />
+          <Field label="Price"       value={it.unit_price}
+            onChangeText={v => updateItem(idx, { unit_price: v })}
+            keyboardType="decimal-pad" prefix="€" placeholder="0.00" />
+          {it.piece_option && it.material_id != null && (
+            <Text style={styles.estimateHint}>
+              Estimated from {it.piece_option}{' '}
+              + {materials.find(m => m.id === it.material_id)?.name ?? 'material'} — edit to override.
+            </Text>
+          )}
 
           <Text style={styles.label}>Measurements</Text>
           {it.measurements.map((m, mIdx) => (
@@ -222,5 +314,13 @@ const styles = StyleSheet.create({
   itemBox: {
     backgroundColor: COLORS.card, borderColor: COLORS.border, borderWidth: 1,
     borderRadius: 18, padding: 14, marginBottom: 12,
+  },
+  hintMuted: {
+    color: COLORS.textMuted, fontSize: 13, fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  estimateHint: {
+    color: COLORS.textMuted, fontSize: 12, fontStyle: 'italic',
+    marginTop: -8, marginBottom: 8,
   },
 });

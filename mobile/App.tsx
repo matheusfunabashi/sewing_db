@@ -16,6 +16,8 @@ import OrderDetailScreen  from './src/screens/OrderDetailScreen';
 import OrderFormScreen    from './src/screens/OrderFormScreen';
 import TicketsScreen      from './src/screens/TicketsScreen';
 import TicketDetailScreen from './src/screens/TicketDetailScreen';
+import MaterialsScreen    from './src/screens/MaterialsScreen';
+import MaterialFormScreen from './src/screens/MaterialFormScreen';
 import { COLORS, paperTheme } from './src/lib/theme';
 
 const Tab   = createBottomTabNavigator();
@@ -52,6 +54,15 @@ function TicketsStack() {
     <Stack.Navigator screenOptions={screenOptions}>
       <Stack.Screen name="TicketsList"  component={TicketsScreen}      options={{ title: 'Tickets' }} />
       <Stack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ title: 'Ticket detail' }} />
+    </Stack.Navigator>
+  );
+}
+
+function MaterialsStack() {
+  return (
+    <Stack.Navigator screenOptions={screenOptions}>
+      <Stack.Screen name="MaterialsList" component={MaterialsScreen}     options={{ headerShown: false }} />
+      <Stack.Screen name="MaterialForm"  component={MaterialFormScreen}  options={{ title: 'Material' }} />
     </Stack.Navigator>
   );
 }
@@ -126,6 +137,11 @@ export default function App() {
               name="Tickets"
               component={TicketsStack}
               options={{ tabBarIcon: TabIcon('ticket-outline') }}
+            />
+            <Tab.Screen
+              name="Materials"
+              component={MaterialsStack}
+              options={{ tabBarIcon: TabIcon('package-variant-closed') }}
             />
             <Tab.Screen
               name="Customers"
