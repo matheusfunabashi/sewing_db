@@ -1,6 +1,6 @@
 # Sewing Shop Management System
 
-A full-stack app for managing a sewing shop — customers, orders, production tickets, and deliveries. Built with Django, Supabase (Postgres), and React Native (Expo Go).
+Demo full-stack app for managing a sewing shop — customers, orders, production tickets, and deliveries. Built with **Django (REST API + admin)**, **Supabase (Postgres)**, and a **React Native (Expo) mobile app**.
 
 ---
 
@@ -15,40 +15,120 @@ sewing_project/
 
 ---
 
-## 1. Database (Supabase)
+## Project quick overview (how it works)
 
-You'll need your Supabase project's database credentials from:
-**Project Settings → Database → Connection string**
+- **Database**: Supabase hosts the Postgres database. This repo includes SQL files to create the schema and optional demo data.
+- **Backend**: Django exposes REST endpoints used by the mobile app and also provides an admin panel for managing data.
+- **Mobile**: Expo app that talks to the Django API over your local network (during development).
 
-Then run these two files in the **SQL Editor**, in order:
+Core workflow:
+- **Customer & order**: Create a customer, then create an order (garments, measurements, due date).
+- **Production tickets**: Each garment becomes a ticket that moves through stages (e.g. cutting → sewing → finishing → delivered). Stage changes are logged.
+- **Delivery**: Mark the order as completed/delivered to close it out.
+
+---
+
+## Important note (demo limitations)
+
+This project is intended as a **demo / prototype**. If you want to use it “always-on” in a real environment, you’ll need additional work for:
+- **Authentication & authorization** (roles, permissions, secure admin access)
+- **Production hosting** (backend deployment, domain, HTTPS, secrets management)
+- **Mobile distribution** (proper builds via EAS/App Store/Play Store, not just Expo Go)
+- **Operational hardening** (logging/monitoring, backups, migrations strategy, RLS policies as needed)
+
+---
+
+## Prerequisites
+
+- **Supabase account** (free tier is fine to start)
+- **Python** (for Django) and **Node.js** (for Expo)
+- **Expo Go** app installed on your phone (iOS App Store / Google Play)
+
+---
+
+## 1. Database (Supabase setup)
+
+### Create a Supabase project
+
+1. Create an account at [Supabase](https://supabase.com/).
+2. Create a **new project**.
+3. Once created, open:
+   - **Project Settings → Database** (you’ll use the connection details here)
+   - **SQL Editor** (you’ll run the schema/seed scripts here)
+
+### Initialize the schema
+
+Run these files in the **SQL Editor**, in order:
 
 1. `supabase/01_schema.sql` — tables, enums, indexes, triggers
 2. `supabase/02_seed.sql` — optional demo data
 
-Django won't touch these tables — they're all set to `managed = False`.
+This backend connects directly to the Supabase Postgres database. Django models for these tables are configured with `managed = False`.
 
 ---
 
-## 2. Backend (Django)
+## 2. Backend (Django API + admin)
+
+### Set up Python environment
+
+From the repo root:
 
 ```bash
 cd backend
-python3 -m venv .venv
+python -m venv .venv
+```
+
+Activate the venv:
+
+**Windows (PowerShell):**
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks script execution, run this once (then try again):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+**macOS/Linux (bash/zsh):**
+
+```bash
 source .venv/bin/activate
+```
+
+Then install dependencies and create your env file:
+
+```bash
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Open `.env` and fill in your database connection. The easiest way is a single URI:
+On Windows, if `cp` isn’t available in your shell, use:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### Configure environment variables
+
+Open `backend/.env` and fill in your values.
+
+Minimum recommended setup:
 
 ```
 DJANGO_SECRET_KEY=some-long-random-string
-DATABASE_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+DATABASE_URL=postgresql://postgres:<your-db-password>@db.<your-project-ref>.supabase.co:5432/postgres?sslmode=require
 ```
 
-Or use individual fields if you prefer — see `.env.example` for the full list.
+Where to find the Supabase values:
+- **Project ref / host**: Supabase project settings (Database connection info)
+- **Database password**: the password you set when creating the Supabase project (or reset in settings)
 
-Then:
+If you prefer individual fields instead of `DATABASE_URL`, see `.env.example`.
+
+### Run the backend
 
 ```bash
 python manage.py migrate
@@ -62,14 +142,27 @@ python manage.py runserver 0.0.0.0:8000
 
 ---
 
-## 3. Mobile app (Expo Go)
+## 3. Mobile app (Expo + Expo Go)
+
+### Install Expo Go (on your phone)
+
+- **iOS**: install “Expo Go” from the App Store
+- **Android**: install “Expo Go” from Google Play
+
+### Install mobile dependencies
 
 ```bash
 cd mobile
 npm install
 ```
 
-Edit `mobile/app.json` and set `expo.extra.apiUrl` to your Django server's address. If you're on a real device, use your computer's LAN IP — your phone can't reach `localhost`.
+### Point the app at your backend
+
+Edit `mobile/app.json` and set `expo.extra.apiUrl` to your Django server address.
+
+Important:
+- If you’re using **a real phone**, you must use your computer’s **LAN IP** (your phone can’t reach `localhost`).
+- Ensure your phone and computer are on the **same Wi‑Fi/network**.
 
 ```json
 "extra": {
@@ -77,29 +170,37 @@ Edit `mobile/app.json` and set `expo.extra.apiUrl` to your Django server's addre
 }
 ```
 
-Then start Expo:
+### Start the app
 
 ```bash
 npx expo start
 ```
 
-Scan the QR code with your phone — Camera app on iOS, Expo Go app on Android.
+Then:
+- **iOS**: scan the QR code with the Camera app
+- **Android**: scan the QR code from inside Expo Go
 
 ---
 
-## 4. How the workflows work
+## Running everything (end-to-end)
 
-**Customer & order** — Add a customer, then create an order with garments, measurements, and a due date.
-
-**Production tickets** — Open an order and generate tickets (one per garment). From there you can advance each ticket through the production stages: `order_received → design_confirmed → cutting → sewing → finishing → quality_check → ready_for_delivery → delivered`. Every stage change is logged automatically via a Postgres trigger.
-
-**Delivery** — Once production is done, mark the order completed and then delivered. This records the delivery date and closes the order.
-
-Everything above can also be done from the Django admin at `/admin/`.
+1. **Supabase**: create project → run `supabase/01_schema.sql` (and optionally `02_seed.sql`)
+2. **Backend**: start Django at `http://<your-computer-ip>:8000/`
+3. **Mobile**: set `expo.extra.apiUrl` to `http://<your-computer-ip>:8000/api` → `npx expo start` → open in Expo Go
 
 ---
 
-## 5. API endpoints
+## Supabase access tips
+
+- **SQL Editor**: where you run the schema + seed SQL
+- **Table editor**: quick way to inspect data while testing
+- **Database settings**: where you find host/project ref and reset your database password
+
+This repo does not require you to set up Supabase Auth to run the demo.
+
+---
+
+## 4. API endpoints (high level)
 
 | Method | URL | What it does |
 |--------|-----|--------------|
@@ -118,14 +219,14 @@ Everything above can also be done from the Django admin at `/admin/`.
 
 ---
 
-## 6. Common issues
+## 5. Common bugs & how to fix them
 
-**`SSL required` error** — Check that `OPTIONS["sslmode"] = "require"` is in `settings.py` and that your password is correct.
+- **`SSL required` error**: Ensure your DB connection enforces SSL (for example `?sslmode=require` in `DATABASE_URL`, or `OPTIONS["sslmode"] = "require"` in Django settings) and re-check your Supabase DB password.
 
-**`relation "order" does not exist`** — You haven't run `01_schema.sql` yet.
+- **`relation "order" does not exist`**: Run `supabase/01_schema.sql` in the Supabase SQL Editor (schema wasn’t created yet).
 
-**`Network request failed` in Expo Go** — Your phone can't reach your computer via `localhost`. Use the LAN IP shown when you run `npx expo start`.
+- **`Network request failed` in Expo Go**: Don’t use `localhost` in `apiUrl` when testing on a phone. Use your computer’s LAN IP and make sure phone + computer are on the same network.
 
-**Admin panel looks unstyled** — Make sure `unfold` appears before `django.contrib.admin` in `INSTALLED_APPS`.
+- **Admin panel looks unstyled**: Ensure `unfold` is listed **before** `django.contrib.admin` in `INSTALLED_APPS`.
 
-**`type "order_status" does not exist`** — The schema SQL didn't finish. Re-run `01_schema.sql` from scratch.
+- **`type "order_status" does not exist`**: The schema script didn’t finish cleanly. Re-run `supabase/01_schema.sql` (and verify it completes without errors).
