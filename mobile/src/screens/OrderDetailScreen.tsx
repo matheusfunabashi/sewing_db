@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import {
   Alert,
+  Image,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -123,17 +124,26 @@ export default function OrderDetailScreen({ route, navigation }: any) {
             <Text style={styles.sub}>Tickets</Text>
             {it.tickets.length === 0 && <Text style={styles.meta}>None yet.</Text>}
             {it.tickets.map(t => (
-              <View key={t.id} style={styles.ticketRow}>
-                <Text
-                  onPress={() => navigation.navigate('Tickets', { screen: 'TicketDetail', params: { id: t.id } })}
-                  style={{ color: COLORS.primary, fontWeight: '700', fontSize: 14 }}
-                >
-                  {t.code}
-                </Text>
-                <View style={{ flexDirection: 'row', gap: 6 }}>
-                  <Badge value={t.stage}  small />
-                  <Badge value={t.status} small />
+              <View key={t.id}>
+                <View style={styles.ticketRow}>
+                  <Text
+                    onPress={() => navigation.navigate('Tickets', { screen: 'TicketDetail', params: { id: t.id } })}
+                    style={{ color: COLORS.primary, fontWeight: '700', fontSize: 14 }}
+                  >
+                    {t.code}
+                  </Text>
+                  <View style={{ flexDirection: 'row', gap: 6 }}>
+                    <Badge value={t.stage}  small />
+                    <Badge value={t.status} small />
+                  </View>
                 </View>
+                {t.garment_photo ? (
+                  <Image
+                    source={{ uri: `data:image/jpeg;base64,${t.garment_photo}` }}
+                    style={styles.ticketPhoto}
+                    resizeMode="cover"
+                  />
+                ) : null}
               </View>
             ))}
           </View>
@@ -186,4 +196,8 @@ const styles = StyleSheet.create({
   itemTitle:  { fontSize: 16, fontWeight: '800', color: COLORS.text },
   measure:    { color: COLORS.text, fontSize: 14, marginTop: 2 },
   ticketRow:  { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 6 },
+  ticketPhoto: {
+    width: '100%', height: 180, borderRadius: 12,
+    marginTop: 6, marginBottom: 6, backgroundColor: COLORS.background,
+  },
 });

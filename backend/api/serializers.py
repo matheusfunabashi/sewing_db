@@ -60,6 +60,7 @@ class TicketSerializer(serializers.ModelSerializer):
     )
     history = StatusHistorySerializer(many=True, read_only=True)
     materials_used = TicketMaterialSerializer(many=True, read_only=True)
+    has_garment_photo = serializers.SerializerMethodField()
 
     class Meta:
         model = Ticket
@@ -68,10 +69,15 @@ class TicketSerializer(serializers.ModelSerializer):
             "status", "stage", "priority", "deadline",
             "assigned_employee", "assigned_employee_name",
             "started_at", "completed_at",
+            "garment_photo", "garment_photo_at", "has_garment_photo",
             "created_at", "updated_at",
             "history", "materials_used",
         )
-        read_only_fields = ("created_at", "updated_at")
+        read_only_fields = ("created_at", "updated_at", "garment_photo_at",
+                           "has_garment_photo")
+
+    def get_has_garment_photo(self, obj: Ticket) -> bool:
+        return bool(obj.garment_photo)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

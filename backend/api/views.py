@@ -137,16 +137,22 @@ class OrderViewSet(viewsets.ModelViewSet):
         """
         Return tickets that are not ready for order delivery.
 
-        Rule:
-        - To deliver an order, every non-cancelled ticket must be in
-          `ready_for_delivery` or `delivered`.
+        Rules:
+        - Every non-cancelled ticket must be in `ready_for_delivery` or
+          `delivered`.
+        - Every such ticket must already have a garment photo attached.
         """
         allowed = {"ready_for_delivery", "delivered"}
-        return list(
-            Ticket.objects.filter(order_item__order=order)
-            .exclude(status="cancelled")
-            .exclude(stage__in=allowed)
-        )
+        related = Ticket.objects.filter(
+            order_item__order=order
+        ).exclude(status="cancelled")
+        blocking = []
+        for ticket in related:
+            if ticket.stage not in allowed:
+                blocking.append(ticket)
+            elif not ticket.garment_photo:
+                blocking.append(ticket)
+        return blocking
 
     @action(detail=True, methods=["post"])
     def mark_in_production(self, request, pk=None):
@@ -192,14 +198,24 @@ class OrderViewSet(viewsets.ModelViewSet):
         order = self.get_object()
         blocking = self._blocking_tickets_for_delivery(order)
         if blocking:
+            missing_photo = [t for t in blocking
+                             if t.stage in ("ready_for_delivery", "delivered")
+                             and not t.garment_photo]
+            if missing_photo and len(missing_photo) == len(blocking):
+                detail = ("Order cannot be delivered yet. Some tickets are missing "
+                          "a garment photo.")
+            else:
+                detail = ("Order cannot be delivered yet. Some tickets are not in "
+                          "ready-for-delivery stage or are missing a photo.")
             return Response(
                 {
-                    "detail": (
-                        "Order cannot be delivered yet. Some tickets are not in "
-                        "ready-for-delivery stage."
-                    ),
+                    "detail": detail,
                     "blocking_tickets": [
-                        {"id": t.id, "code": t.code, "stage": t.stage, "status": t.status}
+                        {
+                            "id": t.id, "code": t.code, "stage": t.stage,
+                            "status": t.status,
+                            "missing_photo": not bool(t.garment_photo),
+                        }
                         for t in blocking[:10]
                     ],
                     "blocking_count": len(blocking),
@@ -259,7 +275,12 @@ class TicketViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def advance_stage(self, request, pk=None):
-        """Workflow: move the ticket to the next production stage."""
+        """Workflow: move the ticket to the next production stage.
+
+        When advancing from `ready_for_delivery` to `delivered`, a garment
+        photo is required. The caller may attach it in the same request via
+        the `garment_photo` field (base64-encoded JPEG).
+        """
         order = ["order_received", "design_confirmed", "cutting", "sewing",
                  "finishing", "quality_check", "ready_for_delivery", "delivered"]
         ticket = self.get_object()
@@ -268,6 +289,18 @@ class TicketViewSet(viewsets.ModelViewSet):
         except ValueError:
             idx = -1
         next_stage = order[min(idx + 1, len(order) - 1)]
+
+        photo = request.data.get("garment_photo") if hasattr(request, "data") else None
+        if photo:
+            ticket.garment_photo = photo
+            ticket.garment_photo_at = timezone.now()
+
+        if next_stage == "delivered" and not ticket.garment_photo:
+            return Response(
+                {"detail": "A garment photo is required before delivery."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         ticket.stage = next_stage
         if next_stage == "delivered":
             ticket.status = "completed"
@@ -285,8 +318,35 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Response(
                 {"detail": "Invalid stage"}, status=status.HTTP_400_BAD_REQUEST
             )
+
+        photo = request.data.get("garment_photo")
+        if photo:
+            ticket.garment_photo = photo
+            ticket.garment_photo_at = timezone.now()
+
+        if stage == "delivered" and not ticket.garment_photo:
+            return Response(
+                {"detail": "A garment photo is required before delivery."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         ticket.stage = stage
-        ticket.save(update_fields=["stage", "updated_at"])
+        ticket.save()
+        return Response(self.get_serializer(ticket).data)
+
+    @action(detail=True, methods=["post"])
+    def upload_photo(self, request, pk=None):
+        """Attach (or replace) the garment photo for this ticket."""
+        ticket = self.get_object()
+        photo = request.data.get("garment_photo")
+        if not photo:
+            return Response(
+                {"detail": "garment_photo is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        ticket.garment_photo = photo
+        ticket.garment_photo_at = timezone.now()
+        ticket.save(update_fields=["garment_photo", "garment_photo_at", "updated_at"])
         return Response(self.get_serializer(ticket).data)
 
 

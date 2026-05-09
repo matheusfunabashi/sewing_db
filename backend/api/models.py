@@ -236,6 +236,8 @@ class Ticket(models.Model):
     deadline = models.DateField(blank=True, null=True)
     started_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)
+    garment_photo = models.TextField(blank=True, null=True)
+    garment_photo_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

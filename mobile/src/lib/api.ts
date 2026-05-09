@@ -87,6 +87,9 @@ export interface Ticket {
   deadline?: string | null;
   assigned_employee?: number | null;
   assigned_employee_name?: string | null;
+  garment_photo?: string | null;
+  garment_photo_at?: string | null;
+  has_garment_photo?: boolean;
   history?: StatusHistory[];
 }
 
